@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Macular Degeneration Simulator</title>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #0e0e11;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #ffffff;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* CAMERA AREA */
+.viewer {
+  flex: 1;
+  position: relative;
+  background: black;
+}
+
+video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(0px) contrast(100%);
+}
+
+/* Blind spot overlay */
+#blindspot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200px;
+  height: 200px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* CONTROL PANEL */
+.controls {
+  width: 300px;
+  background: #14141a;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.controls h2 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.5px;
+}
+
+button {
+  background: #1f1f2b;
+  border: none;
+  color: white;
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+button:hover {
+  background: #2a2a3a;
+}
+
+button.active {
+  background: #3a3aff;
+}
+
+.slider-group label {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+input[type="range"] {
+  width: 100%;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <div class="viewer">
+    <video id="camera" autoplay playsinline></video>
+    <img id="blindspot" src="blindspot.png" alt="Blind spot overlay" />
+  </div>
+
+  <div class="controls">
+    <h2>Visual Acuity</h2>
+
+    <button onclick="setBlur(0, this)">20 / 20</button>
+    <button onclick="setBlur(0.5, this)">20 / 40</button>
+    <button onclick="setBlur(0.7, this)">20 / 50</button>
+    <button onclick="setBlur(1.25, this)">20 / 70</button>
+    <button onclick="setBlur(1.75, this)">20 / 100</button>
+    <button onclick="setBlur(2.25, this)">20 / 120</button>
+    <button onclick="setBlur(3.0, this)">20 / 200</button>
+
+    <h2>Blind Spot Size</h2>
+    <div class="slider-group">
+      <label>Central Scotoma</label>
+      <input type="range" min="50" max="500" value="200"
+        oninput="resizeBlindSpot(this.value)" />
+    </div>
+
+    <h2>Contrast Loss</h2>
+    <div class="slider-group">
+      <label>Contrast Sensitivity</label>
+      <input type="range" min="40" max="100" value="100"
+        oninput="setContrast(this.value)" />
+    </div>
+
+    <h2>Camera</h2>
+    <button onclick="flipCamera()">Flip Camera</button>
+  </div>
+
+</div>
+
+<script>
+const video = document.getElementById("camera");
+const blindspot = document.getElementById("blindspot");
+
+let currentStream;
+let usingFrontCamera = false;
+let currentBlur = 0;
+let currentContrast = 100;
+
+/* Start camera */
+async function startCamera() {
+  if (currentStream) {
+    currentStream.getTracks().forEach(track => track.stop());
+  }
+
+  const constraints = {
+    video: {
+      facingMode: usingFrontCamera ? "user" : "environment"
+    }
+  };
+
+  currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+  video.srcObject = currentStream;
+
+  /* Disable mirroring */
+  video.style.transform = "scaleX(1)";
+}
+
+startCamera();
+
+/* Apply combined filters */
+function applyFilters() {
+  video.style.filter = `blur(${currentBlur}px) contrast(${currentContrast}%)`;
+}
+
+/* Blur control */
+function setBlur(px, button) {
+  currentBlur = px;
+  applyFilters();
+
+  document.querySelectorAll(".controls button").forEach(b => {
+    b.classList.remove("active");
+  });
+  button.classList.add("active");
+}
+
+/* Contrast control */
+function setContrast(value) {
+  currentContrast = value;
+  applyFilters();
+}
+
+/* Blind spot resize */
+function resizeBlindSpot(size) {
+  blindspot.style.width = size + "px";
+  blindspot.style.height = size + "px";
+}
+
+/* Camera flip */
+function flipCamera() {
+  usingFrontCamera = !usingFrontCamera;
+  startCamera();
+}
+</script>
+
+</body>
+</html>
